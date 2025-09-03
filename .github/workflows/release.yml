@@ -1,0 +1,50 @@
+name: Build and Release mfup
+
+on:
+  push:
+    tags:
+      - 'v*'   
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build binary with PyInstaller
+        run: |
+          pyinstaller --onefile --name mfup mfup/cli.py
+
+      - name: Package artifact
+        run: |
+          mkdir upload
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            tar -czvf upload/mfup-${{ github.ref_name }}-linux.tar.gz -C dist mfup
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            tar -czvf upload/mfup-${{ github.ref_name }}-macos.tar.gz -C dist mfup
+          else
+            powershell Compress-Archive -Path dist/mfup.exe -DestinationPath upload/mfup-${{ github.ref_name }}-windows.zip
+          fi
+
+      - name: Upload release binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          files: upload/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
