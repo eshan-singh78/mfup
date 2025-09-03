@@ -6,12 +6,13 @@ on:
       - 'v*'   
 
 permissions:
-  contents: write   
+  contents: write  
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
@@ -33,16 +34,23 @@ jobs:
         run: |
           pyinstaller --onefile --clean --noconfirm --name mfup coremfup/mfup/cli.py
 
-      - name: Package artifact
+      - name: Package artifact (Linux)
+        if: runner.os == 'Linux'
         run: |
           mkdir upload
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-            tar -czvf upload/mfup-${{ github.ref_name }}-linux.tar.gz -C dist mfup
-          elif [[ "${{ runner.os }}" == "macOS" ]]; then
-            tar -czvf upload/mfup-${{ github.ref_name }}-macos.tar.gz -C dist mfup
-          else
-            powershell Compress-Archive -Path dist/mfup.exe -DestinationPath upload/mfup-${{ github.ref_name }}-windows.zip
-          fi
+          tar -czvf upload/mfup-${{ github.ref_name }}-linux.tar.gz -C dist mfup
+
+      - name: Package artifact (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir upload
+          tar -czvf upload/mfup-${{ github.ref_name }}-macos.tar.gz -C dist mfup
+
+      - name: Package artifact (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir upload
+          powershell Compress-Archive -Path dist/mfup.exe -DestinationPath upload/mfup-${{ github.ref_name }}-windows.zip
 
       - name: Upload release binaries
         uses: softprops/action-gh-release@v1
