@@ -28,7 +28,7 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
-          pyinstaller --onefile --clean --noconfirm --name mfup mfup/cli.py
+          pyinstaller --onefile --clean --noconfirm --name mfup coremfup/mfup/cli.py
 
       - name: Package artifact
         run: |
