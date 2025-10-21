@@ -13,45 +13,49 @@ def progress_hook(d):
 
 def _get_opts(debug=False, extra_opts=None):
     opts = {
-        "quiet": not debug,       
+        "quiet": not debug,
         "no_warnings": not debug,
         "progress_hooks": [progress_hook],
         "outtmpl": "%(title)s.%(ext)s",
+        "merge_output_format": "mp4",
     }
     if extra_opts:
         opts.update(extra_opts)
     return opts
 
-def get_video_formats(url, debug=False):
+def get_video_resolutions(url, debug=False):
 
     try:
         with yt_dlp.YoutubeDL(_get_opts(debug)) as ydl:
             info = ydl.extract_info(url, download=False)
-            formats = []
+            resolutions = set()
             for f in info.get("formats", []):
-                if f.get("vcodec") != "none":
-                    res = f.get("format_note") or f.get("resolution")
-                    if res and res not in formats:
-                        formats.append(res)
-            return formats or ["best"]
+                if f.get("vcodec") != "none" and f.get("height"):
+                    resolutions.add(f["height"])
+            return sorted(resolutions)
     except Exception as e:
         print(f"[!] Error fetching formats: {e}")
-        return ["best"]
+        return []
 
-def download_video(url, quality="best", debug=False):
+def download_video(url, resolution="best", debug=False):
 
-    opts = _get_opts(debug, {
-        "format": f"bestvideo[format_note={quality}]+bestaudio/best / best",
-        "merge_output_format": "mp4",
-    })
+    if resolution != "best":
+        fmt = f"bestvideo[height<={resolution}]+bestaudio/best"
+    else:
+        fmt = "bestvideo+bestaudio/best"
+
+    opts = _get_opts(debug, {"format": fmt})
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
-def download_video_only(url, quality="best", debug=False):
+def download_video_only(url, resolution="best", debug=False):
 
-    opts = _get_opts(debug, {
-        "format": f"bestvideo[format_note={quality}] / bestvideo",
-    })
+    if resolution != "best":
+        fmt = f"bestvideo[height<={resolution}]"
+    else:
+        fmt = "bestvideo"
+
+    opts = _get_opts(debug, {"format": fmt})
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
@@ -69,3 +73,31 @@ def download_audio(url, audio_format="mp3", debug=False):
     })
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
+
+def choose_resolution(url):
+
+    resolutions = get_video_resolutions(url)
+    if not resolutions:
+        return "best"
+
+    print("Available resolutions:", ", ".join(map(str, resolutions)))
+    choice = input("Choose resolution (or press Enter for best): ").strip()
+    if choice.isdigit() and int(choice) in resolutions:
+        return int(choice)
+    return "best"
+
+if __name__ == "__main__":
+    url = input("Enter YouTube URL: ").strip()
+    mode = input("What do you want to download? (video/audio/video_only) ").strip().lower()
+
+    if mode in ["video", "video_only"]:
+        resolution = choose_resolution(url)
+        if mode == "video":
+            download_video(url, resolution)
+        else:
+            download_video_only(url, resolution)
+    elif mode == "audio":
+        audio_format = input("Audio format (mp3/m4a/etc.): ").strip() or "mp3"
+        download_audio(url, audio_format)
+    else:
+        print("Invalid option.")
