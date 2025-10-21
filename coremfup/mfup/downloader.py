@@ -24,7 +24,6 @@ def _get_opts(debug=False, extra_opts=None):
     return opts
 
 def get_video_resolutions(url, debug=False):
-
     try:
         with yt_dlp.YoutubeDL(_get_opts(debug)) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -37,30 +36,23 @@ def get_video_resolutions(url, debug=False):
         print(f"[!] Error fetching formats: {e}")
         return []
 
+def get_video_formats(url, debug=False):
+    """Return resolutions as strings for InquirerPy choices"""
+    return [str(r) for r in get_video_resolutions(url, debug)]
+
 def download_video(url, resolution="best", debug=False):
-
-    if resolution != "best":
-        fmt = f"bestvideo[height<={resolution}]+bestaudio/best"
-    else:
-        fmt = "bestvideo+bestaudio/best"
-
+    fmt = f"bestvideo[height<={resolution}]+bestaudio/best" if resolution != "best" else "bestvideo+bestaudio/best"
     opts = _get_opts(debug, {"format": fmt})
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
 def download_video_only(url, resolution="best", debug=False):
-
-    if resolution != "best":
-        fmt = f"bestvideo[height<={resolution}]"
-    else:
-        fmt = "bestvideo"
-
+    fmt = f"bestvideo[height<={resolution}]" if resolution != "best" else "bestvideo"
     opts = _get_opts(debug, {"format": fmt})
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
 def download_audio(url, audio_format="mp3", debug=False):
-
     opts = _get_opts(debug, {
         "format": "bestaudio/best",
         "postprocessors": [
@@ -73,31 +65,3 @@ def download_audio(url, audio_format="mp3", debug=False):
     })
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
-
-def choose_resolution(url):
-
-    resolutions = get_video_resolutions(url)
-    if not resolutions:
-        return "best"
-
-    print("Available resolutions:", ", ".join(map(str, resolutions)))
-    choice = input("Choose resolution (or press Enter for best): ").strip()
-    if choice.isdigit() and int(choice) in resolutions:
-        return int(choice)
-    return "best"
-
-if __name__ == "__main__":
-    url = input("Enter YouTube URL: ").strip()
-    mode = input("What do you want to download? (video/audio/video_only) ").strip().lower()
-
-    if mode in ["video", "video_only"]:
-        resolution = choose_resolution(url)
-        if mode == "video":
-            download_video(url, resolution)
-        else:
-            download_video_only(url, resolution)
-    elif mode == "audio":
-        audio_format = input("Audio format (mp3/m4a/etc.): ").strip() or "mp3"
-        download_audio(url, audio_format)
-    else:
-        print("Invalid option.")

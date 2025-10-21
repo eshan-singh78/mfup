@@ -10,7 +10,6 @@ def main():
 
     debug_mode = args.debug
 
-
     choice = inquirer.select(
         message="What do you want to download?",
         choices=["Audio only", "Video (with audio)"],
@@ -22,6 +21,7 @@ def main():
             message="Choose video quality:",
             choices=formats,
         ).execute()
+        quality = int(quality) if quality.isdigit() else "best"
         download_video(args.url, quality, debug=debug_mode)
 
     elif choice == "Audio only":
