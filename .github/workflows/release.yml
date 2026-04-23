@@ -3,10 +3,10 @@ name: Build and Release mfup
 on:
   push:
     tags:
-      - 'v*'   
+      - 'v*'
 
 permissions:
-  contents: write  
+  contents: write
 
 jobs:
   build:
@@ -18,21 +18,35 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp InquirerPy pyinstaller
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest -v
 
       - name: Build binary with PyInstaller
         run: |
-          pyinstaller --onefile --clean --noconfirm --name mfup coremfup/mfup/cli.py
+          pyinstaller --clean --noconfirm mfup.spec
+
+      - name: Smoke test binary
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            ./dist/mfup.exe --version
+            ./dist/mfup.exe --help
+          else
+            ./dist/mfup --version
+            ./dist/mfup --help
+          fi
+        shell: bash
 
       - name: Package artifact (Linux)
         if: runner.os == 'Linux'
@@ -53,7 +67,7 @@ jobs:
           powershell Compress-Archive -Path dist/mfup.exe -DestinationPath upload/mfup-${{ github.ref_name }}-windows.zip
 
       - name: Upload release binaries
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: upload/*
         env:

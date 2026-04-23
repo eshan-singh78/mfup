@@ -2,11 +2,11 @@
 
 
 a = Analysis(
-    ['mfup/cli.py'],
-    pathex=[],
+    ['coremfup/mfup/cli.py'],
+    pathex=['coremfup'],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=['InquirerPy'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
